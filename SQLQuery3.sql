@@ -1,13 +1,12 @@
 CREATE DATABASE sample_news_events_db;
 USE sample_news_events_db;
--- Drop the table if it already exists
 IF OBJECT_ID('events_masters_final', 'U') IS NOT NULL
     DROP TABLE events_masters_final;
 GO
 
--- Create the new table with valid primary key type
+
 CREATE TABLE events_masters_final (
-    event_id NVARCHAR(50) PRIMARY KEY,  -- Changed from NVARCHAR(MAX)
+    event_id NVARCHAR(50) PRIMARY KEY,
     event_type NVARCHAR(MAX),
     summary NVARCHAR(MAX),
     category NVARCHAR(MAX),
@@ -24,9 +23,6 @@ CREATE TABLE events_masters_final (
 );
 GO
 
-
-
--- List all tables
 SELECT TABLE_SCHEMA, TABLE_NAME 
 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_TYPE='BASE TABLE';
@@ -39,11 +35,7 @@ WHERE p.index_id IN (0,1)
 GROUP BY t.name
 ORDER BY total_rows DESC;
 
--- ==========================
--- Remove duplicates for all datasets
--- ==========================
 
--- Part 1
 SELECT DISTINCT *
 INTO temp_final_dataset_part1
 FROM final_dataset_part1;
@@ -56,7 +48,6 @@ SELECT * FROM temp_final_dataset_part1;
 DROP TABLE temp_final_dataset_part1;
 
 
--- Part 2
 SELECT DISTINCT *
 INTO temp_final_dataset_part2
 FROM final_dataset_part2;
@@ -69,7 +60,6 @@ SELECT * FROM temp_final_dataset_part2;
 DROP TABLE temp_final_dataset_part2;
 
 
--- Part 3
 SELECT DISTINCT *
 INTO temp_final_dataset_part3
 FROM final_dataset_part3;
@@ -82,7 +72,6 @@ SELECT * FROM temp_final_dataset_part3;
 DROP TABLE temp_final_dataset_part3;
 
 
--- Part 4
 SELECT DISTINCT *
 INTO temp_final_dataset_part4
 FROM final_dataset_part4;
@@ -95,7 +84,6 @@ SELECT * FROM temp_final_dataset_part4;
 DROP TABLE temp_final_dataset_part4;
 
 
--- Part 5
 SELECT DISTINCT *
 INTO temp_final_dataset_part5
 FROM final_dataset_part5;
@@ -108,7 +96,6 @@ SELECT * FROM temp_final_dataset_part5;
 DROP TABLE temp_final_dataset_part5;
 
 
--- Part 6
 SELECT DISTINCT *
 INTO temp_final_dataset_part6
 FROM final_dataset_part6;
@@ -121,7 +108,6 @@ SELECT * FROM temp_final_dataset_part6;
 DROP TABLE temp_final_dataset_part6;
 
 
--- Part 7
 SELECT DISTINCT *
 INTO temp_final_dataset_part7
 FROM final_dataset_part7;
@@ -133,7 +119,6 @@ SELECT * FROM temp_final_dataset_part7;
 
 DROP TABLE temp_final_dataset_part7;
 
--- Insert from part 1
 INSERT INTO events_masters_final (
     event_id,
     event_type,
@@ -157,7 +142,6 @@ WHERE NOT EXISTS (
     WHERE m.event_id = f.event_id
 );
 
--- Repeat for part 2
 INSERT INTO events_masters_final
 SELECT DISTINCT *
 FROM final_dataset_part2 f
@@ -166,7 +150,6 @@ WHERE NOT EXISTS (
     WHERE m.event_id = f.event_id
 );
 
--- Repeat for part 3
 INSERT INTO events_masters_final
 SELECT DISTINCT *
 FROM final_dataset_part3 f
@@ -175,7 +158,6 @@ WHERE NOT EXISTS (
     WHERE m.event_id = f.event_id
 );
 
--- Repeat for part 4
 INSERT INTO events_masters_final
 SELECT DISTINCT *
 FROM final_dataset_part4 f
@@ -184,7 +166,7 @@ WHERE NOT EXISTS (
     WHERE m.event_id = f.event_id
 );
 
--- Repeat for part 5
+
 INSERT INTO events_masters_final
 SELECT DISTINCT *
 FROM final_dataset_part5 f
@@ -193,7 +175,7 @@ WHERE NOT EXISTS (
     WHERE m.event_id = f.event_id
 );
 
--- Repeat for part 6
+
 INSERT INTO events_masters_final
 SELECT DISTINCT *
 FROM final_dataset_part6 f
@@ -202,7 +184,7 @@ WHERE NOT EXISTS (
     WHERE m.event_id = f.event_id
 );
 
--- Repeat for part 7
+
 INSERT INTO events_masters_final
 SELECT DISTINCT *
 FROM final_dataset_part7 f
@@ -217,15 +199,15 @@ FROM events_masters_final
 GROUP BY event_id
 HAVING COUNT(*) > 1;
 
--- Alter column to proper date type
+
 ALTER TABLE events_masters_final
 ALTER COLUMN event_date DATETIME;
 
--- Now you can create index
+
 CREATE INDEX idx_event_date ON events_masters_final(event_date);
 
 
--- Drop existing index
+
 IF EXISTS (SELECT name 
            FROM sys.indexes 
            WHERE name = 'idx_event_date' AND object_id = OBJECT_ID('events_masters_final'))
@@ -233,13 +215,13 @@ BEGIN
     DROP INDEX idx_event_date ON events_masters_final;
 END
 
--- Recreate index
+
 CREATE INDEX idx_event_date ON events_masters_final(event_date);
--- Check total rows
+
 SELECT COUNT(*) AS total_rows
 FROM events_masters_final;
 
--- Preview first 10 rows
+
 SELECT TOP 10 *
 FROM events_masters_final;
 
@@ -305,12 +287,12 @@ WHERE rn = 1
 AND event_id NOT IN (SELECT event_id FROM dbo.events_masters_final);
 
 
--- 1. Drop table if exists
+
 IF OBJECT_ID('dbo.events_masters_final', 'U') IS NOT NULL
     DROP TABLE dbo.events_masters_final;
 GO
 
--- 2. Create the final table
+
 CREATE TABLE dbo.events_masters_final (
     event_id UNIQUEIDENTIFIER PRIMARY KEY,
     event_type NVARCHAR(255),
@@ -329,7 +311,7 @@ CREATE TABLE dbo.events_masters_final (
 );
 GO
 
--- 3. Insert data from all parts removing duplicates across all tables
+
 WITH Combined AS (
     SELECT * FROM dbo.final_dataset_part1
     UNION ALL
@@ -350,14 +332,14 @@ Deduplicated AS (
     FROM Combined
     WHERE event_id IS NOT NULL
 )
--- Keep only distinct event_id
+
 INSERT INTO dbo.events_masters_final
 SELECT *
 FROM Deduplicated AS D
 WHERE D.event_id NOT IN (SELECT event_id FROM dbo.events_masters_final);
 GO
 
--- 4. Create indexes on valid columns
+
 CREATE NONCLUSTERED INDEX idx_event_date
 ON dbo.events_masters_final(event_date);
 
@@ -369,22 +351,16 @@ ON dbo.events_masters_final(company1_id);
 GO
 
 
--- ==========================
--- 1. Use your database
--- ==========================
+
 USE sample_news_events_db;
 GO
 
--- ==========================
--- 2. Drop table if it exists
--- ==========================
+
 IF OBJECT_ID('dbo.events_masters_final', 'U') IS NOT NULL
     DROP TABLE dbo.events_masters_final;
 GO
 
--- ==========================
--- 3. Create the final table
--- ==========================
+
 CREATE TABLE dbo.events_masters_final (
     event_id UNIQUEIDENTIFIER PRIMARY KEY,
     event_type NVARCHAR(255),
@@ -403,11 +379,7 @@ CREATE TABLE dbo.events_masters_final (
 );
 GO
 
--- ==========================
--- 4. Insert unique data from all parts
--- Deduplicate across all 7 tables based on event_id
--- Keep the latest event_date if duplicates exist
--- ==========================
+
 WITH CombinedData AS (
     SELECT *, ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY event_date DESC) AS rn
     FROM (
@@ -439,9 +411,7 @@ FROM CombinedData
 WHERE rn = 1;
 GO
 
--- ==========================
--- 5. Create indexes for Tableau
--- ==========================
+
 CREATE NONCLUSTERED INDEX idx_event_date ON dbo.events_masters_final(event_date);
 CREATE NONCLUSTERED INDEX idx_event_type ON dbo.events_masters_final(event_type);
 CREATE NONCLUSTERED INDEX idx_category ON dbo.events_masters_final(category);
@@ -449,21 +419,15 @@ CREATE NONCLUSTERED INDEX idx_company1_id ON dbo.events_masters_final(company1_i
 CREATE NONCLUSTERED INDEX idx_company2_id ON dbo.events_masters_final(company2_id);
 GO
 
--- ==========================
--- 6. Check total rows inserted
--- ==========================
+
 SELECT COUNT(*) AS total_rows FROM dbo.events_masters_final;
 GO
 
--- ==========================
--- 7. Preview top 10 rows
--- ==========================
+
 SELECT TOP 10 * FROM dbo.events_masters_final;
 GO
 
--- ==========================
--- 8. Check for any duplicates (should return 0)
--- ==========================
+
 SELECT event_id, COUNT(*) AS cnt
 FROM dbo.events_masters_final
 GROUP BY event_id
@@ -473,4 +437,5 @@ GO
 SELECT *
 FROM dbo.events_masters_final;
 EXEC sp_help 'dbo.events_masters_final';
+
 
